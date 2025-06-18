@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const scanRoutes = require('./routes/scanRoutes');
+const medidorRoutes = require('./routes/medidorRoutes');
 
 dotenv.config();
 const app = express();
@@ -17,6 +18,8 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/scan', scanRoutes);
+app.use('/api/medidores', medidorRoutes);
 
-const PORT = process.env.PORT || 4000;
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
