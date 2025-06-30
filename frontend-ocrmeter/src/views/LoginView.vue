@@ -1,52 +1,35 @@
 <template>
-  <div class="container d-flex align-items-center justify-content-center vh-100">
-    <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
-      <h3 class="text-center mb-4">Iniciar Sesión</h3>
-
-      <form @submit.prevent="handleLogin">
+  <div class="d-flex justify-content-center align-items-center vh-100 bg-light">
+    <div class="card p-4 shadow" style="width: 100%; max-width: 400px;">
+      <h4 class="mb-4 text-center">Iniciar Sesión</h4>
+      <form @submit.prevent="login">
         <div class="mb-3">
-          <label for="email" class="form-label">Correo electrónico</label>
-          <input type="email" v-model="email" class="form-control" id="email" required />
+          <label>Email</label>
+          <input v-model="email" type="email" class="form-control" required />
         </div>
-
         <div class="mb-3">
-          <label for="password" class="form-label">Contraseña</label>
-          <input type="password" v-model="password" class="form-control" id="password" required />
+          <label>Contraseña</label>
+          <input v-model="password" type="password" class="form-control" required />
         </div>
-
-        <button type="submit" class="btn btn-primary w-100">Ingresar</button>
+        <button class="btn btn-primary w-100">Ingresar</button>
       </form>
-
-      <div v-if="error" class="alert alert-danger mt-3">
-        {{ error }}
-      </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: "LoginView",
-  data() {
-    return {
-      email: '',
-      password: '',
-      error: ''
-    };
-  },
-  methods: {
-    async handleLogin() {
-      this.error = '';
+<script setup>
+import { useRouter } from 'vue-router'
+import { ref } from 'vue'
 
-      // Aquí puedes reemplazar con llamada a tu API
-      if (this.email === 'admin@example.com' && this.password === '123456') {
-        // Simular login exitoso
-        localStorage.setItem('token', 'faketoken123');
-        this.$router.push('/dashboard'); // Ruta protegida
-      } else {
-        this.error = 'Correo o contraseña incorrectos';
-      }
-    }
+const router = useRouter()
+const email = ref('')
+const password = ref('')
+
+function login() {
+  if (email.value === 'admin@example.com' && password.value === '123456') {
+    router.push('/dashboard')
+  } else {
+    alert('Credenciales incorrectas')
   }
 }
 </script>
