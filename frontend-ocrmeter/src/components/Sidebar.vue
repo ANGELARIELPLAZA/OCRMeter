@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const isCollapsed = ref(false)
 const showCatalogos = ref(true)
@@ -14,6 +15,15 @@ const toggleCollapse = () => {
     showInfo.value = false
   }
 }
+const router = useRouter()
+
+const logout = () => {
+  localStorage.removeItem('token')
+  router.push('/login')
+  window.location.href = '/login' // ✅ redirige al login y recarga
+
+}
+
 </script>
 
 <template>
@@ -32,9 +42,15 @@ const toggleCollapse = () => {
           <span v-if="!isCollapsed">Dashboard</span>
         </router-link>
       </li>
-
+      <li>
+        <router-link to="/medicion" class="nav-link">
+          <i class="bi bi-building-add me-2"></i>
+          <span v-if="!isCollapsed">Registro de medicion</span>
+        </router-link>
+      </li>
       <!-- Catálogos -->
-      <li class="nav-section-title mt-3 d-flex justify-content-between align-items-center" @click="showCatalogos = !showCatalogos" style="cursor: pointer;">
+      <li class="nav-section-title mt-3 d-flex justify-content-between align-items-center"
+        @click="showCatalogos = !showCatalogos" style="cursor: pointer;">
         <span>
           <i class="bi bi-folder me-2"></i>
           <span v-if="!isCollapsed">Catálogos</span>
@@ -42,15 +58,21 @@ const toggleCollapse = () => {
         <i v-if="!isCollapsed" :class="['bi', showCatalogos ? 'bi-chevron-up' : 'bi-chevron-down']"></i>
       </li>
       <ul v-show="showCatalogos" class="nav flex-column ms-3">
-        <li><router-link to="/config/usuarios" class="nav-link"><i class="bi bi-person me-2"></i><span v-if="!isCollapsed">Usuarios</span></router-link></li>
-        <li><router-link to="/config/roles" class="nav-link"><i class="bi bi-people me-2"></i><span v-if="!isCollapsed">Roles</span></router-link></li>
-        <li><router-link to="/config/medidores" class="nav-link"><i class="bi bi-lightning me-2"></i><span v-if="!isCollapsed">Medidores</span></router-link></li>
-        <li><router-link to="/config/areas" class="nav-link"><i class="bi bi-grid-3x3-gap me-2"></i><span v-if="!isCollapsed">Áreas</span></router-link></li>
-        <li><router-link to="/config/qr" class="nav-link"><i class="bi bi-qr-code me-2"></i><span v-if="!isCollapsed">QR</span></router-link></li>
+        <li><router-link to="/config/usuarios" class="nav-link"><i class="bi bi-person me-2"></i><span
+              v-if="!isCollapsed">Usuarios</span></router-link></li>
+        <li><router-link to="/config/roles" class="nav-link"><i class="bi bi-people me-2"></i><span
+              v-if="!isCollapsed">Roles</span></router-link></li>
+        <li><router-link to="/config/medidores" class="nav-link"><i class="bi bi-lightning me-2"></i><span
+              v-if="!isCollapsed">Medidores</span></router-link></li>
+        <li><router-link to="/config/areas" class="nav-link"><i class="bi bi-grid-3x3-gap me-2"></i><span
+              v-if="!isCollapsed">Áreas</span></router-link></li>
+        <li><router-link to="/config/qr" class="nav-link"><i class="bi bi-qr-code me-2"></i><span
+              v-if="!isCollapsed">QR</span></router-link></li>
       </ul>
 
       <!-- Información -->
-      <li class="nav-section-title mt-3 d-flex justify-content-between align-items-center" @click="showInfo = !showInfo" style="cursor: pointer;">
+      <li class="nav-section-title mt-3 d-flex justify-content-between align-items-center" @click="showInfo = !showInfo"
+        style="cursor: pointer;">
         <span>
           <i class="bi bi-info-circle me-2"></i>
           <span v-if="!isCollapsed">Información</span>
@@ -58,9 +80,18 @@ const toggleCollapse = () => {
         <i v-if="!isCollapsed" :class="['bi', showInfo ? 'bi-chevron-up' : 'bi-chevron-down']"></i>
       </li>
       <ul v-show="showInfo" class="nav flex-column ms-3">
-        <li><router-link to="/info/api" class="nav-link"><i class="bi bi-code-slash me-2"></i><span v-if="!isCollapsed">API</span></router-link></li>
-        <li><router-link to="/info/mediciones" class="nav-link"><i class="bi bi-graph-up me-2"></i><span v-if="!isCollapsed">Mediciones</span></router-link></li>
+        <li><router-link to="/info/api" class="nav-link"><i class="bi bi-code-slash me-2"></i><span
+              v-if="!isCollapsed">API</span></router-link></li>
+        <li><router-link to="/info/reportes" class="nav-link"><i class="bi bi-file-earmark-bar-graph me-2"></i><span
+              v-if="!isCollapsed">Reporte</span></router-link></li>
       </ul>
+      <hr />
+      <li>
+        <button class="btn btn-outline-danger w-100 d-flex align-items-center" @click="logout">
+          <i class="bi bi-box-arrow-right me-2"></i> Cerrar sesión
+        </button>
+      </li>
+
     </ul>
   </aside>
 </template>
