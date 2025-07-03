@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-const API_URL = 'http://localhost:4000/api/auth'
+const API_URL = import.meta.env.VITE_API_URL
 
 // Estado reactivo de login
 const isLoggedIn = ref(!!localStorage.getItem('token'))

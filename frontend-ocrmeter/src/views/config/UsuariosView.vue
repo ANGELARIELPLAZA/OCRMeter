@@ -78,6 +78,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+const API_URL = import.meta.env.VITE_API_URL
 
 const usuarios = ref([])
 
@@ -121,8 +122,8 @@ const guardarUsuario = async () => {
   try {
     const token = localStorage.getItem('token')
     const endpoint = editando.value
-      ? `http://localhost:4000/api/users/${usuarios.value[indiceEditando.value].id}`
-      : 'http://localhost:4000/api/auth/register'
+  ? `${API_URL}/users/${usuarios.value[indiceEditando.value].id}`
+  : `${API_URL}/auth/register`
 
     const method = editando.value ? 'PUT' : 'POST'
 
@@ -171,7 +172,7 @@ const eliminarUsuario = async (index) => {
     const token = localStorage.getItem('token')
     const id = usuarios.value[index].id
 
-    const res = await fetch(`http://localhost:4000/api/users/${id}`, {
+    const res = await fetch(`${API_URL}/api/users/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -192,7 +193,7 @@ onMounted(async () => {
   try {
     const token = localStorage.getItem('token')
 
-    const res = await fetch('http://localhost:4000/api/users', {
+    const res = await fetch(`${API_URL}/api/users`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
