@@ -135,8 +135,11 @@
 
       <!-- Calendario de próximas recolecciones -->
       <div class="col-md-6">
-        <n-calendar v-model:value="calendarFechaSeleccionada"
-          :is-date-disabled="(date) => !fechasProgramadasMap[formatearFecha(date)]" :panel="false" />
+        <div style="width: 90%; height: 90%; overflow: auto;">
+          <n-calendar v-if="scannedId" v-model:value="calendarFechaSeleccionada"
+            :is-date-disabled="(date) => !fechasProgramadasMap[formatearFecha(date)]" :panel="false" />
+        </div>
+
         <div class="mt-2 text-muted small">
           <i class="bi bi-calendar-check"></i> Fechas resaltadas: días con recolección programada.
         </div>
@@ -149,7 +152,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Html5Qrcode } from 'html5-qrcode'
-import { NCard, NTimeline, NTimelineItem } from 'naive-ui'
+import { NCard, NTimeline, NTimelineItem, NCalendar } from 'naive-ui'
 
 // Historial debe ir arriba para que Vue lo registre correctamente
 const historial = ref({
@@ -161,6 +164,24 @@ const historial = ref({
     { fecha: '2024-06-10 11:00', valor: 130, unidad: 'litros', dentroRango: true }
   ]
 })
+const calendarFechaSeleccionada = ref(null)
+
+const fechasProgramadas = ref({
+  ID123456: ['2024-07-03', '2024-07-05'],
+  ID987654: ['2024-07-04'],
+  ID555111: ['2024-07-07']
+})
+const formatearFecha = (date) => {
+  return new Date(date).toISOString().split('T')[0] // YYYY-MM-DD
+}
+const fechasProgramadasMap = computed(() => {
+  const id = scannedId.value
+  const fechas = fechasProgramadas.value[id] || []
+  const map = {}
+  fechas.forEach(fecha => map[fecha] = true)
+  return map
+})
+
 
 const unidad = ref('')
 const unidadesDisponibles = ['litros', 'm³', 'psi']
