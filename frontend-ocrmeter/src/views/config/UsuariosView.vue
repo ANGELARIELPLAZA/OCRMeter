@@ -123,7 +123,7 @@ const guardarUsuario = async () => {
     const token = localStorage.getItem('token')
     const endpoint = editando.value
   ? `${API_URL}/users/${usuarios.value[indiceEditando.value].id}`
-  : `${API_URL}/auth/register`
+  : `${API_URL}/api/auth/register`
 
     const method = editando.value ? 'PUT' : 'POST'
 
