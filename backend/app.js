@@ -11,8 +11,19 @@ dotenv.config();
 const app = express();
 
 // ✅ Agrega el middleware CORS antes de definir las rutas
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://74.208.44.21:5173'
+];
+
 app.use(cors({
-  origin: 'http://localhost:5173', // tu frontend
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
