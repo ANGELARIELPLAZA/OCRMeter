@@ -22,15 +22,15 @@ const routes = [
   // 🛠 Configuración (solo admin)
   { path: '/config/usuarios', component: UsuariosView, meta: { requiresAuth: true, roles: ['admin'] } },
   { path: '/config/roles', component: RolesView, meta: { requiresAuth: true, roles: ['admin'] } },
-  { path: '/config/medidores', component: MedidoresView, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
-  { path: '/config/areas', component: AreasView, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
-  { path: '/config/qr', component: QrGeneradosView, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
-  { path: '/config', component: ConfigIndexView, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
+  { path: '/config/medidores', component: MedidoresView, meta: { requiresAuth: true, roles: ['admin'] } },
+  { path: '/config/areas', component: AreasView, meta: { requiresAuth: true, roles: ['admin',] } },
+  { path: '/config/qr', component: QrGeneradosView, meta: { requiresAuth: true, roles: ['admin'] } },
+  { path: '/config', component: ConfigIndexView, meta: { requiresAuth: true, roles: ['admin'] } },
 
   // 📊 Información general
-  { path: '/info/Api', component: API, meta: { requiresAuth: true } },
-  { path: '/info/reportes', name: 'MedicionesReportes', component: MedicionesReportes, meta: { requiresAuth: true } },
-  { path: '/medicion', name: 'Recolección', component: Medicion, meta: { requiresAuth: true } }
+  { path: '/info/Api', component: API, meta: { requiresAuth: true, roles: ['admin'] } },
+  { path: '/info/reportes', name: 'MedicionesReportes', component: MedicionesReportes, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
+  { path: '/medicion', name: 'Recolección', component: Medicion, meta: { requiresAuth: true, roles: ['admin', 'supervisor', 'Operador'] } }
 ];
 
 const router = createRouter({
