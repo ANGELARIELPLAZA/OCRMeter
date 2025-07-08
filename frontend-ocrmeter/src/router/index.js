@@ -10,21 +10,27 @@ import AreasView from '../views/config/AreasView.vue';
 import QrGeneradosView from '../views/config/QrGeneradosView.vue';
 import ConfigIndexView from '../views/config/ConfigIndexView.vue';
 import API from '@/views/information/ApiView.vue';
+import MedicionesReportes from '@/views/MedicionesReportes.vue';
+import Medicion from '@/views/Medicion.vue';
 
 const routes = [
   { path: '/', component: LoginView, meta: { layout: 'auth' } },
   { path: '/login', component: LoginView, meta: { layout: 'auth' } },
 
   { path: '/dashboard', component: CPanelView, meta: { requiresAuth: true } },
-  { path: '/config/usuarios', component: UsuariosView, meta: { requiresAuth: true } },
-  { path: '/config/roles', component: RolesView, meta: { requiresAuth: true } },
-  { path: '/config/medidores', component: MedidoresView, meta: { requiresAuth: true } },
-  { path: '/config/areas', component: AreasView, meta: { requiresAuth: true } },
-  { path: '/config/qr', component: QrGeneradosView, meta: { requiresAuth: true } },
-  { path: '/config', component: ConfigIndexView, meta: { requiresAuth: true } },
+
+  // 🛠 Configuración (solo admin)
+  { path: '/config/usuarios', component: UsuariosView, meta: { requiresAuth: true, roles: ['admin'] } },
+  { path: '/config/roles', component: RolesView, meta: { requiresAuth: true, roles: ['admin'] } },
+  { path: '/config/medidores', component: MedidoresView, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
+  { path: '/config/areas', component: AreasView, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
+  { path: '/config/qr', component: QrGeneradosView, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
+  { path: '/config', component: ConfigIndexView, meta: { requiresAuth: true, roles: ['admin', 'supervisor'] } },
+
+  // 📊 Información general
   { path: '/info/Api', component: API, meta: { requiresAuth: true } },
-  { path: '/info/reportes', name: 'MedicionesReportes', component: () => import('@/views/MedicionesReportes.vue'), meta: { requiresAuth: true } },
-  { path: '/medicion', name: 'Recolección', component: () => import('@/views/Medicion.vue'), meta: { requiresAuth: true } }
+  { path: '/info/reportes', name: 'MedicionesReportes', component: MedicionesReportes, meta: { requiresAuth: true } },
+  { path: '/medicion', name: 'Recolección', component: Medicion, meta: { requiresAuth: true } }
 ];
 
 const router = createRouter({
@@ -32,14 +38,19 @@ const router = createRouter({
   routes
 });
 
+// ✅ Middleware global para auth y roles
 router.beforeEach((to, from, next) => {
   const requiereAuth = to.matched.some(record => record.meta.requiresAuth);
   const estaAutenticado = authService.isAuthenticated();
+  const user = authService.getUsuario(); // Debe retornar { name, email, role }
 
   if (requiereAuth && !estaAutenticado) {
     next('/login');
   } else if ((to.path === '/' || to.path === '/login') && estaAutenticado) {
     next('/dashboard');
+  } else if (to.meta.roles && (!user || !to.meta.roles.includes(user.role))) {
+    alert('Acceso denegado: no tienes permisos para esta sección.');
+    next('/dashboard'); // Puedes redirigir a otra vista segura
   } else {
     next();
   }
