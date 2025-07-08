@@ -1,7 +1,6 @@
 <template>
   <div>
     <Breadcrumb />
-
     <h5 class="mb-3">Gestión de Áreas</h5>
 
     <div class="card p-3 shadow-sm">
@@ -20,7 +19,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(area, index) in areas" :key="index">
+            <tr v-for="(area, index) in areas" :key="area.id">
               <td>{{ index + 1 }}</td>
               <td>{{ area.nombre }}</td>
               <td>{{ area.responsable }}</td>
@@ -38,7 +37,7 @@
     </div>
 
     <!-- Modal -->
-    <div class="modal fade" tabindex="-1" :class="{ show: mostrarModal }" style="display: block;" v-if="mostrarModal">
+    <div class="modal fade show d-block" tabindex="-1" v-if="mostrarModal">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
@@ -61,7 +60,9 @@
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" @click="cerrarFormulario">Cancelar</button>
-            <button class="btn btn-primary" @click="guardarArea">{{ editando ? 'Guardar Cambios' : 'Crear' }}</button>
+            <button class="btn btn-primary" @click="guardarArea">
+              {{ editando ? 'Guardar Cambios' : 'Crear' }}
+            </button>
           </div>
         </div>
       </div>
@@ -71,15 +72,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 
-const areas = ref([
-  { nombre: 'Planta 1', responsable: 'Ing. Pérez', ubicacion: 'Edificio A - Piso 1' },
-  { nombre: 'Laboratorio', responsable: 'Dra. Ramírez', ubicacion: 'Edificio C - Nivel 2' },
-  { nombre: 'Oficinas', responsable: 'Lic. González', ubicacion: 'Edificio B - Planta Baja' }
-])
-
+const API_URL = import.meta.env.VITE_API_URL
+const areas = ref([])
 const mostrarModal = ref(false)
 const editando = ref(false)
 const indiceEditando = ref(-1)
@@ -107,20 +104,89 @@ const cerrarFormulario = () => {
   mostrarModal.value = false
 }
 
-const guardarArea = () => {
-  if (editando.value && indiceEditando.value >= 0) {
-    areas.value[indiceEditando.value] = { ...form.value }
-  } else {
-    areas.value.push({ ...form.value })
+const guardarArea = async () => {
+  const payload = { ...form.value }
+
+  try {
+    const token = localStorage.getItem('token')
+    const endpoint = editando.value
+      ? `${API_URL}/api/areas/${areas.value[indiceEditando.value].id}`
+      : `${API_URL}/api/areas`
+    const method = editando.value ? 'PUT' : 'POST'
+
+    const res = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+
+    if (editando.value) {
+      areas.value[indiceEditando.value] = { ...data, id: data._id }
+    } else {
+      areas.value.push({ ...data, id: data._id })
+    }
+
+    cerrarFormulario()
+  } catch (err) {
+    console.error('Error al guardar área:', err.message)
+    alert('Error al guardar área')
   }
-  cerrarFormulario()
 }
 
-const eliminarArea = (index) => {
-  if (confirm('¿Deseas eliminar esta área?')) {
+const eliminarArea = async (index) => {
+  if (!confirm('¿Deseas eliminar esta área?')) return
+
+  try {
+    const token = localStorage.getItem('token')
+    const id = areas.value[index].id
+
+    const res = await fetch(`${API_URL}/api/areas/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    if (!res.ok) {
+      const data = await res.json()
+      throw new Error(data.message || 'Error al eliminar área')
+    }
+
     areas.value.splice(index, 1)
+  } catch (error) {
+    console.error('Error al eliminar área:', error.message)
+    alert('No se pudo eliminar el área')
   }
 }
+
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem('token')
+
+    const res = await fetch(`${API_URL}/api/areas`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || 'Error al obtener áreas')
+
+    areas.value = data.map(area => ({
+      id: area._id,
+      nombre: area.nombre,
+      responsable: area.responsable,
+      ubicacion: area.ubicacion
+    }))
+  } catch (error) {
+    console.error('Error al cargar áreas:', error.message)
+  }
+})
 </script>
 
 <style scoped>

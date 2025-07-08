@@ -11,18 +11,22 @@
         <thead class="table-light">
           <tr>
             <th>#</th>
-            <th>Nombre del Medidor</th>
+            <th>ID</th>
+            <th>Nombre</th>
             <th>Tipo</th>
-            <th>Ubicación</th>
+            <th>Marca</th>
+            <th>Modelo</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(medidor, index) in medidores" :key="index">
             <td>{{ index + 1 }}</td>
+            <td>{{ medidor.id }}</td>
             <td>{{ medidor.nombre }}</td>
             <td>{{ medidor.tipo }}</td>
-            <td>{{ medidor.ubicacion }}</td>
+            <td>{{ medidor.marca }}</td>
+            <td>{{ medidor.modelo }}</td>
             <td>
               <button class="btn btn-sm btn-primary me-1" @click="abrirFormulario(medidor, index)">Editar</button>
               <button class="btn btn-sm btn-danger" @click="eliminarMedidor(index)">Eliminar</button>
@@ -42,21 +46,34 @@
           </div>
           <div class="modal-body">
             <div class="mb-3">
+              <label class="form-label">ID del Medidor</label>
+              <div class="input-group">
+                <input type="text" class="form-control" v-model="form.id" placeholder="MD-XXXXXX" />
+                <button class="btn btn-outline-secondary" type="button" @click="generarId">Generar</button>
+              </div>
+            </div>
+            <div class="mb-3">
               <label class="form-label">Nombre</label>
               <input type="text" class="form-control" v-model="form.nombre" />
             </div>
             <div class="mb-3">
               <label class="form-label">Tipo</label>
-              <input type="text" class="form-control" v-model="form.tipo" />
+              <input type="text" class="form-control" v-model="form.tipo" readonly />
             </div>
             <div class="mb-3">
-              <label class="form-label">Ubicación</label>
-              <input type="text" class="form-control" v-model="form.ubicacion" />
+              <label class="form-label">Marca</label>
+              <input type="text" class="form-control" v-model="form.marca" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Modelo</label>
+              <input type="text" class="form-control" v-model="form.modelo" />
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" @click="cerrarFormulario">Cancelar</button>
-            <button class="btn btn-primary" @click="guardarMedidor">{{ editando ? 'Guardar Cambios' : 'Crear' }}</button>
+            <button class="btn btn-primary" @click="guardarMedidor">
+              {{ editando ? 'Guardar Cambios' : 'Crear' }}
+            </button>
           </div>
         </div>
       </div>
@@ -66,24 +83,29 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 
-const medidores = ref([
-  { nombre: 'Medidor 001', tipo: 'Eléctrico', ubicacion: 'Edificio A - Planta Baja' },
-  { nombre: 'Medidor 002', tipo: 'Agua', ubicacion: 'Edificio B - Nivel 2' },
-  { nombre: 'Medidor 003', tipo: 'Gas', ubicacion: 'Exterior - Tanque Central' }
-])
+const API_URL = import.meta.env.VITE_API_URL
+const token = localStorage.getItem('token')
 
+const medidores = ref([])
 const mostrarModal = ref(false)
 const editando = ref(false)
 const indiceEditando = ref(-1)
 
 const form = ref({
+  id: '',
   nombre: '',
-  tipo: '',
-  ubicacion: ''
+  tipo: 'Agua',
+  marca: '',
+  modelo: ''
 })
+
+const generarId = () => {
+  const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
+  form.value.id = `MD-${random}`
+}
 
 const abrirFormulario = (medidor = null, index = -1) => {
   if (medidor) {
@@ -91,7 +113,7 @@ const abrirFormulario = (medidor = null, index = -1) => {
     editando.value = true
     indiceEditando.value = index
   } else {
-    form.value = { nombre: '', tipo: '', ubicacion: '' }
+    form.value = { id: '', nombre: '', tipo: 'Agua', marca: '', modelo: '' }
     editando.value = false
     indiceEditando.value = -1
   }
@@ -102,20 +124,71 @@ const cerrarFormulario = () => {
   mostrarModal.value = false
 }
 
-const guardarMedidor = () => {
-  if (editando.value && indiceEditando.value >= 0) {
-    medidores.value[indiceEditando.value] = { ...form.value }
-  } else {
-    medidores.value.push({ ...form.value })
+const guardarMedidor = async () => {
+  if (!form.value.id || !form.value.nombre || !form.value.marca || !form.value.modelo) {
+    alert('Completa todos los campos')
+    return
   }
-  cerrarFormulario()
+
+  try {
+    const endpoint = editando.value
+      ? `${API_URL}/api/medidores/${form.value.id}`
+      : `${API_URL}/api/medidores`
+    const method = editando.value ? 'PUT' : 'POST'
+
+    const res = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(form.value)
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+
+    if (editando.value) {
+      medidores.value[indiceEditando.value] = data
+    } else {
+      medidores.value.unshift(data)
+    }
+
+    cerrarFormulario()
+  } catch (err) {
+    alert(err.message)
+  }
 }
 
-const eliminarMedidor = (index) => {
-  if (confirm('¿Estás seguro de eliminar este medidor?')) {
+const eliminarMedidor = async (index) => {
+  if (!confirm('¿Seguro que deseas eliminar este medidor?')) return
+
+  try {
+    const id = medidores.value[index].id
+    const res = await fetch(`${API_URL}/api/medidores/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    if (!res.ok) throw new Error('Error al eliminar')
     medidores.value.splice(index, 1)
+  } catch (err) {
+    alert(err.message)
   }
 }
+
+onMounted(async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/medidores`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+    medidores.value = data
+  } catch (err) {
+    console.error(err.message)
+  }
+})
 </script>
 
 <style scoped>

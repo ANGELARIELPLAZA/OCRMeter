@@ -1,68 +1,62 @@
 const Medidor = require('../models/Medidor');
-const QRCode = require('qrcode');
 
-function generarIDMedidor() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let id = '';
-    for (let i = 0; i < 6; i++) {
-        id += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return id;
-}
-
+// Crear
 exports.crearMedidor = async (req, res) => {
-    const { nombre, utilidad, unidad, marca, modelo } = req.body;
+  try {
+    const { id, nombre, tipo, marca, modelo } = req.body;
 
-    if (!nombre || !utilidad || !unidad || !marca || !modelo) {
-        return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+    if (!id || !nombre || !marca || !modelo) {
+      return res.status(400).json({ message: 'Faltan campos obligatorios.' });
     }
 
-    const idGenerado = generarIDMedidor();
-
-    try {
-        // Generar QR basado en el ID
-        const qrBase64 = await QRCode.toDataURL(`MEDIDOR-${idGenerado}`);
-
-        const nuevoMedidor = new Medidor({
-            id: idGenerado,
-            nombre,
-            utilidad,
-            unidad,
-            marca,
-            modelo,
-            qr: qrBase64
-        });
-
-        await nuevoMedidor.save();
-
-        res.status(201).json({ message: 'Medidor creado correctamente', medidor: nuevoMedidor });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    // Verificar si ya existe ese ID
+    const existente = await Medidor.findOne({ id });
+    if (existente) {
+      return res.status(400).json({ message: 'Ya existe un medidor con ese ID.' });
     }
+
+    const nuevo = new Medidor({ id, nombre, tipo, marca, modelo });
+    await nuevo.save();
+    res.status(201).json(nuevo);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al crear medidor', error });
+  }
 };
-// Obtener todos o con filtros
+
+// Listar todos
 exports.obtenerMedidores = async (req, res) => {
-    try {
-        const filtros = {};
-
-        if (req.query.utilidad) filtros.utilidad = req.query.utilidad;
-        if (req.query.marca) filtros.marca = req.query.marca;
-        if (req.query.modelo) filtros.modelo = req.query.modelo;
-
-        const medidores = await Medidor.find(filtros);
-        res.status(200).json(medidores);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const medidores = await Medidor.find().sort({ createdAt: -1 });
+    res.json(medidores);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener medidores', error });
+  }
 };
 
-// Obtener por ID único generado
-exports.obtenerMedidorPorId = async (req, res) => {
-    try {
-        const medidor = await Medidor.findOne({ id: req.params.id });
-        if (!medidor) return res.status(404).json({ message: 'Medidor no encontrado' });
-        res.status(200).json(medidor);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+// Actualizar
+exports.actualizarMedidor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const actualizado = await Medidor.findOneAndUpdate({ id }, req.body, { new: true });
+
+    if (!actualizado) return res.status(404).json({ message: 'Medidor no encontrado.' });
+
+    res.json(actualizado);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar', error });
+  }
+};
+
+// Eliminar
+exports.eliminarMedidor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const eliminado = await Medidor.findOneAndDelete({ id });
+
+    if (!eliminado) return res.status(404).json({ message: 'Medidor no encontrado.' });
+
+    res.json({ message: 'Medidor eliminado correctamente.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar', error });
+  }
 };

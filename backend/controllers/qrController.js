@@ -1,0 +1,42 @@
+const Qr = require('../models/Qr');
+
+// GET todos los QR
+exports.obtenerTodos = async (req, res) => {
+  try {
+    const qrs = await Qr.find();
+    res.json(qrs);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// POST crear nuevo QR
+exports.crear = async (req, res) => {
+  try {
+    const nuevoQr = new Qr(req.body);
+    const qrGuardado = await nuevoQr.save();
+    res.status(201).json(qrGuardado);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// PUT actualizar QR por ID de Mongo
+exports.actualizar = async (req, res) => {
+  try {
+    const qrActualizado = await Qr.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(qrActualizado);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// PUT deshabilitar (cambia `activo: false`)
+exports.deshabilitar = async (req, res) => {
+  try {
+    const qr = await Qr.findByIdAndUpdate(req.params.id, { activo: false }, { new: true });
+    res.json(qr);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};

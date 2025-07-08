@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const medidorController = require('../controllers/medidorController');
+const auth = require('../middleware/authMiddleware');
 
-router.post('/crear', medidorController.crearMedidor);
-router.get('/', medidorController.obtenerMedidores); // todos o con filtros
-router.get('/:id', medidorController.obtenerMedidorPorId); // uno por ID único
+router.post('/', auth, medidorController.crearMedidor);
+router.get('/', auth, medidorController.obtenerMedidores);
+router.put('/:id', auth, medidorController.actualizarMedidor);
+router.delete('/:id', auth, medidorController.eliminarMedidor);
 
 module.exports = router;
-

@@ -10,7 +10,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: adminpassword
     volumes:
-      - mongo_data:/data/db  # ✅ volumen persistente
+      - mongo_data:/data/db
     restart: always
 
   backend:
@@ -22,7 +22,7 @@ services:
       - .env
     depends_on:
       - mongo
-    restart: always  # ✅ recomendable para resiliencia
+    restart: always
 
 volumes:
-  mongo_data:  # ✅ volumen declarado
+  mongo_data:

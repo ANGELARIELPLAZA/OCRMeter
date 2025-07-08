@@ -1,41 +1,51 @@
 <template>
   <div>
     <Breadcrumb />
-
     <h5 class="mb-3">QR Generados</h5>
 
     <div class="card p-3 shadow-sm">
-      <p>A continuación se listan los códigos QR generados en el sistema.</p>
-
       <button class="btn btn-success mb-3" @click="abrirModal">Crear nuevo QR</button>
+      <button class="btn btn-outline-primary mb-3" :disabled="qrCodesSeleccionados.length === 0" @click="descargarPDF">Descargar seleccionados en PDF</button>
 
       <table class="table table-bordered table-striped">
         <thead class="table-light">
           <tr>
+            <th><input type="checkbox" @change="toggleSeleccionarTodos($event)" /></th>
             <th>#</th>
+            <th>ID</th>
             <th>Entidad</th>
             <th>Tipo</th>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Área</th>
             <th>QR</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(qr, index) in qrCodes" :key="index">
+          <tr v-for="(qr, index) in qrCodes" :key="qr._id">
+            <td><input type="checkbox" v-model="qrCodesSeleccionados" :value="qr" /></td>
             <td>{{ index + 1 }}</td>
+            <td>{{ qr.id }}</td>
             <td>{{ qr.nombre }}</td>
             <td>{{ qr.tipo }}</td>
-            <td>
+            <td>{{ qr.marca }}</td>
+            <td>{{ qr.modelo }}</td>
+            <td>{{ qr.area }}</td>
+            <td class="text-center">
               <img :src="qr.imagen" alt="QR" style="width: 70px;" />
+              <div class="mt-1 small text-muted">{{ qr.id }}</div>
             </td>
             <td>
-              <a :href="qr.imagen" download="qr.png" class="btn btn-sm btn-outline-secondary">Descargar</a>
+              <button class="btn btn-sm btn-outline-warning me-1" @click="editarQR(qr)">Modificar</button>
+              <button class="btn btn-sm btn-outline-danger" @click="deshabilitarQR(qr._id)">Deshabilitar</button>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Modal para nuevo QR -->
+    <!-- Modal -->
     <div class="modal fade" tabindex="-1" :class="{ show: mostrarModal }" style="display: block;" v-if="mostrarModal">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -45,16 +55,35 @@
           </div>
           <div class="modal-body">
             <div class="mb-3">
+              <label class="form-label">ID (personalizado o autogenerado)</label>
+              <div class="input-group">
+                <input type="text" class="form-control" v-model="nuevoQR.id" placeholder="Ej: QR-000123" />
+                <button class="btn btn-outline-secondary" type="button" @click="generarId">Generar</button>
+              </div>
+            </div>
+            <div class="mb-3">
               <label class="form-label">Nombre / Entidad</label>
               <input type="text" class="form-control" v-model="nuevoQR.nombre" />
             </div>
             <div class="mb-3">
-              <label class="form-label">Tipo</label>
-              <select class="form-select" v-model="nuevoQR.tipo">
-                <option value="" disabled>Seleccionar tipo</option>
-                <option>Medidor</option>
-                <option>Área</option>
-                <option>Usuario</option>
+              <label class="form-label">Marca</label>
+              <select class="form-select" v-model="nuevoQR.marca">
+                <option value="" disabled>Seleccionar marca</option>
+                <option v-for="marca in marcas" :key="marca">{{ marca }}</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Modelo</label>
+              <select class="form-select" v-model="nuevoQR.modelo" :disabled="!nuevoQR.marca">
+                <option value="" disabled>Seleccionar modelo</option>
+                <option v-for="modelo in modelos" :key="modelo">{{ modelo }}</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Área</label>
+              <select class="form-select" v-model="nuevoQR.area">
+                <option value="" disabled>Seleccionar área</option>
+                <option v-for="area in areas" :key="area.id">{{ area.nombre }}</option>
               </select>
             </div>
           </div>
@@ -70,28 +99,84 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
+import jsPDF from 'jspdf'
+
+const API_URL = import.meta.env.VITE_API_URL
+const qrCodes = ref([])
+const qrCodesSeleccionados = ref([])
+const mostrarModal = ref(false)
+const nuevoQR = ref({ id: '', nombre: '', tipo: 'Agua', marca: '', modelo: '', area: '' })
+const areas = ref([])
+const medidores = ref([])
+
+const marcas = ref([])
+const modelos = ref([])
+
+onMounted(() => {
+  obtenerAreas()
+  obtenerMedidores()
+  obtenerQRCodes()
+})
+
+const obtenerQRCodes = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_URL}/api/qrs`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    qrCodes.value = data
+  } catch (err) {
+    console.error('Error al obtener QR Codes:', err)
+  }
+}
 
 function generarQrData(texto) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(texto)}`
 }
 
-const qrCodes = ref([
-  { nombre: 'Medidor 001', tipo: 'Medidor', imagen: generarQrData('medidor001') },
-  { nombre: 'Área Planta 1', tipo: 'Área', imagen: generarQrData('area_planta1') },
-  { nombre: 'Usuario Juan Pérez', tipo: 'Usuario', imagen: generarQrData('usuario_juan') }
-])
+const generarId = () => {
+  const random = Math.floor(100000 + Math.random() * 900000)
+  nuevoQR.value.id = `QR-${random}`
+}
 
-const mostrarModal = ref(false)
+const obtenerAreas = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_URL}/api/areas`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    areas.value = data.map(a => ({ id: a._id, nombre: a.nombre }))
+  } catch (err) {
+    console.error('Error al obtener áreas:', err.message)
+  }
+}
 
-const nuevoQR = ref({
-  nombre: '',
-  tipo: ''
+const obtenerMedidores = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_URL}/api/medidores`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    medidores.value = data
+    marcas.value = [...new Set(data.map(m => m.marca))]
+  } catch (err) {
+    console.error('Error al obtener medidores:', err.message)
+  }
+}
+
+watch(() => nuevoQR.value.marca, (marcaSeleccionada) => {
+  const filtrados = medidores.value.filter(m => m.marca === marcaSeleccionada)
+  modelos.value = [...new Set(filtrados.map(m => m.modelo))]
+  nuevoQR.value.modelo = ''
 })
 
 const abrirModal = () => {
-  nuevoQR.value = { nombre: '', tipo: '' }
+  nuevoQR.value = { id: '', nombre: '', tipo: 'Agua', marca: '', modelo: '', area: '' }
   mostrarModal.value = true
 }
 
@@ -99,25 +184,106 @@ const cerrarModal = () => {
   mostrarModal.value = false
 }
 
-const crearQR = () => {
-  if (!nuevoQR.value.nombre || !nuevoQR.value.tipo) {
+const crearQR = async () => {
+  const { id, nombre, tipo, marca, modelo, area } = nuevoQR.value
+  if (!id || !nombre || !tipo || !marca || !modelo || !area) {
     alert('Completa todos los campos.')
     return
   }
 
+  const textoQR = `${id}_${tipo}_${marca}_${modelo}_${nombre}_${area}`.replace(/\s/g, '_')
   const nuevo = {
-    nombre: nuevoQR.value.nombre,
-    tipo: nuevoQR.value.tipo,
-    imagen: generarQrData(`${nuevoQR.value.tipo.toLowerCase()}_${nuevoQR.value.nombre.replace(/\s/g, '_')}`)
+    id,
+    nombre,
+    tipo,
+    marca,
+    modelo,
+    area,
+    imagen: generarQrData(textoQR)
   }
 
-  qrCodes.value.push(nuevo)
-  cerrarModal()
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_URL}/api/qrs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(nuevo)
+    })
+    const data = await res.json()
+    qrCodes.value.push(data)
+    cerrarModal()
+  } catch (err) {
+    console.error('Error al crear QR:', err.message)
+  }
+}
+
+const editarQR = (qr) => {
+  // Puedes implementar un modal de edición o similar aquí
+  alert(`Modificar QR: ${qr.id}`)
+}
+
+const deshabilitarQR = async (id) => {
+  try {
+    const token = localStorage.getItem('token')
+    await fetch(`${API_URL}/api/qrs/deshabilitar/${id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const index = qrCodes.value.findIndex(q => q._id === id)
+    if (index !== -1) qrCodes.value.splice(index, 1)
+  } catch (err) {
+    console.error('Error al deshabilitar QR:', err)
+  }
+}
+
+const toggleSeleccionarTodos = (event) => {
+  if (event.target.checked) {
+    qrCodesSeleccionados.value = [...qrCodes.value]
+  } else {
+    qrCodesSeleccionados.value = []
+  }
+}
+
+const descargarPDF = async () => {
+  const pdf = new jsPDF()
+  let x = 10
+  let y = 10
+
+  for (let i = 0; i < qrCodesSeleccionados.value.length; i++) {
+    const qr = qrCodesSeleccionados.value[i]
+    const img = new Image()
+    img.crossOrigin = 'Anonymous'
+    img.src = qr.imagen
+
+    await new Promise(resolve => {
+      img.onload = () => {
+        pdf.addImage(img, 'PNG', x, y, 50, 50)
+        pdf.text(`ID: ${qr.id}`, x, y + 55)
+        x += 60
+        if (x > 180) {
+          x = 10
+          y += 70
+        }
+        resolve()
+      }
+    })
+  }
+
+  pdf.save('qr_seleccionados.pdf')
 }
 </script>
 
 <style scoped>
 .modal {
   background: rgba(0, 0, 0, 0.5);
+}
+.small {
+  font-size: 0.75rem;
+}
+.text-muted {
+  color: #6c757d;
 }
 </style>

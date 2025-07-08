@@ -20,10 +20,11 @@
         <label class="form-label">Ingresar ID manualmente</label>
         <input v-model="manualId" list="sugerenciasIds" class="form-control" placeholder="Ej. ID123456" />
         <datalist id="sugerenciasIds">
-          <option v-for="(info, id) in registros" :key="id" :value="id">
+          <option v-for="(info, id) in registrosCatalogo" :key="id" :value="id">
             {{ `${id} - ${info.area}` }}
           </option>
         </datalist>
+
         <button class="btn btn-sm btn-outline-primary mt-2" @click="usarManualId">
           <i class="bi bi-check2-circle"></i> Usar ID ingresado
         </button>
@@ -153,24 +154,35 @@
 import { ref, computed, onMounted } from 'vue'
 import { Html5Qrcode } from 'html5-qrcode'
 import { NCard, NTimeline, NTimelineItem, NCalendar } from 'naive-ui'
+import auth from '@/services/authService' // ⬅️ ajusta la ruta si está en otro lugar
+
+const registrosCatalogo = ref({})
+const imagenBase64 = ref('')
+
+const cargarCatalogoQR = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/qrs`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+
+    // Convertir a objeto: { [id]: { area, tipo } }
+    registrosCatalogo.value = Object.fromEntries(
+      data.map(qr => [qr.id, { area: qr.area, tipo: qr.tipo || 'Agua' }])
+    )
+  } catch (err) {
+    console.error('❌ Error al cargar catálogo QR:', err.message)
+  }
+}
+
 
 // Historial debe ir arriba para que Vue lo registre correctamente
-const historial = ref({
-  ID123456: [
-    { fecha: '2024-06-01 10:30', valor: 100, unidad: 'm³', dentroRango: true },
-    { fecha: '2024-06-05 10:35', valor: 220, unidad: 'm³', dentroRango: false }
-  ],
-  ID987654: [
-    { fecha: '2024-06-10 11:00', valor: 130, unidad: 'litros', dentroRango: true }
-  ]
-})
+const historial = ref({})
 const calendarFechaSeleccionada = ref(null)
 
-const fechasProgramadas = ref({
-  ID123456: ['2024-07-03', '2024-07-05'],
-  ID987654: ['2024-07-04'],
-  ID555111: ['2024-07-07']
-})
+const fechasProgramadas = ref({})
 const formatearFecha = (date) => {
   return new Date(date).toISOString().split('T')[0] // YYYY-MM-DD
 }
@@ -196,17 +208,19 @@ const imageFile = ref(null)
 const area = ref('')
 const tipoMedicion = ref('')
 
-const registros = {
-  ID123456: { area: 'Planta 1_General_Agua', tipo: 'Agua' },
-  ID987654: { area: 'Planta 2_General_Agua', tipo: 'Agua' },
-  ID555111: { area: 'Planta 3_General_Agua', tipo: 'Agua' }
-}
 
 const now = computed(() => new Date().toLocaleString())
 
 let qrScanner = null
 
-onMounted(() => iniciarEscaneo())
+onMounted(() => {
+  iniciarEscaneo()
+  cargarCatalogoQR()
+  const user = auth.getUsuario()
+  if (user) {
+    usuario.value = user.name // 👈 usa "name" como lo devuelve tu backend
+  }
+})
 
 const iniciarEscaneo = () => {
   qrScanner = new Html5Qrcode('reader')
@@ -217,7 +231,11 @@ const iniciarEscaneo = () => {
       procesarQR(decodedText)
       qrScanner.stop().catch(console.error)
     },
-    (err) => console.warn('Error escaneando:', err)
+    (err) => {
+      if (err.name !== 'NotFoundException') {
+        console.warn('Otro error escaneando:', err)
+      }
+    }
   )
 }
 const limpiarFormulario = () => {
@@ -227,13 +245,35 @@ const limpiarFormulario = () => {
   previewImage.value = null
   imageFile.value = null
 }
+const cargarHistorialDesdeAPI = async (id) => {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/scan/${id}/historial`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+
+    historial.value[id] = data.map(item => ({
+      fecha: item.fecha,
+      valor: item.lectura,
+      unidad: item.unidad,
+      dentroRango: item.lectura >= 90 && item.lectura <= 200
+    }))
+  } catch (err) {
+    console.error('❌ Error al obtener historial:', err.message)
+  }
+}
+
 
 const procesarQR = (id) => {
-  limpiarFormulario() // 👈 limpia los campos anteriores
+  limpiarFormulario()
   scannedId.value = id
-  const datos = registros[id] || { area: 'No registrada', tipo: 'No registrado' }
+  const datos = registrosCatalogo.value[id] || { area: 'No registrada', tipo: 'Agua' }
   area.value = datos.area
-  tipoMedicion.value = datos.tipo
+  tipoMedicion.value = datos.tipo,
+    cargarHistorialDesdeAPI(id) // 👈 aquí
+
 }
 
 const usarManualId = () => {
@@ -257,19 +297,27 @@ const handleFileChange = (e) => {
     imageFile.value = file
     previewImage.value = URL.createObjectURL(file)
 
-    // Forzar que el mismo input pueda ser seleccionado de nuevo
-    e.target.value = null
+    // Convertir a base64
+    const reader = new FileReader()
+    reader.onload = () => {
+      imagenBase64.value = reader.result
+    }
+    reader.readAsDataURL(file)
+
+    e.target.value = null // limpiar input
   }
 }
+
 
 const lecturaFueraDeRango = computed(() => {
   const valor = parseFloat(lectura.value)
   return !isNaN(valor) && (valor < 90 || valor > 200)
 })
 
-const submitForm = () => {
+const submitForm = async () => {
+  const token = localStorage.getItem('token')
 
-  const data = {
+  const formData = {
     id: scannedId.value,
     usuario: usuario.value,
     fecha: now.value,
@@ -278,30 +326,36 @@ const submitForm = () => {
     lectura: lectura.value,
     unidad: unidad.value,
     comentario: comentario.value,
-    imagen: imageFile.value ? '[imagen cargada]' : 'Sin imagen'
+    imagen: imagenBase64.value || 'Sin imagen'
   }
 
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(formData)
+    });
 
-  console.log('📦 Datos enviados:', data)
-  alert('✅ Medición registrada con éxito')
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Error al guardar medición');
 
-
-  if (!historial.value[scannedId.value]) {
-    historial.value[scannedId.value] = []
+    alert('✅ Medición registrada y guardada en backend');
+    console.log('📦 Respuesta backend:', data);
+  } catch (err) {
+    console.error('❌ Error al enviar medición:', err.message);
+    alert('Error al guardar medición');
   }
 
-  historial.value[scannedId.value].unshift({
-    fecha: now.value,
-    valor: parseFloat(lectura.value),
-    unidad: unidad.value,
-    dentroRango: parseFloat(lectura.value) >= 90 && parseFloat(lectura.value) <= 200
-  })
-
-
+  // limpiar UI
   comentario.value = ''
   lectura.value = ''
   previewImage.value = null
   imageFile.value = null
   reiniciarEscaneo()
 }
+
+
 </script>
