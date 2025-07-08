@@ -65,9 +65,9 @@ import { ref } from 'vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 
 const roles = ref([
-  { nombre: 'Administrador', descripcion: 'Acceso total al sistema' },
-  { nombre: 'Supervisor', descripcion: 'Puede ver reportes y usuarios' },
-  { nombre: 'Operador', descripcion: 'Acceso limitado a funciones básicas' }
+  { nombre: 'admin', descripcion: 'Acceso total al sistema' },
+  { nombre: 'supervisor', descripcion: 'Puede ver reportes y usuarios' },
+  { nombre: 'operador', descripcion: 'Acceso limitado a funciones básicas' }
 ])
 
 const mostrarModal = ref(false)

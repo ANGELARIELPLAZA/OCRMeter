@@ -55,7 +55,7 @@
                   <select class="form-select" v-model="form.rol">
                     <option value="">Seleccione un rol</option>
                     <option>admin</option>
-                    <option>usuario</option>
+                    <option>operador</option>
                     <option>supervisor</option>
                   </select>
                 </div>
