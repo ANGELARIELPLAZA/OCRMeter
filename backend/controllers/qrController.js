@@ -40,3 +40,15 @@ exports.deshabilitar = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
+
+
+exports.contar = async (req, res) => {
+  try {
+    // ✅ Correcto
+    const total = await Qr.countDocuments();
+    res.json({ total });
+  } catch (err) {
+    console.error('❌ Error al contar QRs:', err.message);
+    res.status(500).json({ message: 'Error al contar los QRs' });
+  }
+};

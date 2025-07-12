@@ -3,6 +3,9 @@ const router = express.Router();
 const areaController = require('../controllers/areaController');
 const auth = require('../middleware/authMiddleware');
 
+// Contar áreas
+router.get('/count', auth, areaController.contarAreas);
+
 // Crear área
 router.post('/', auth, areaController.crearArea);
 

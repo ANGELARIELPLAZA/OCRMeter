@@ -151,7 +151,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount  } from 'vue'
 import { Html5Qrcode } from 'html5-qrcode'
 import { NCard, NTimeline, NTimelineItem, NCalendar } from 'naive-ui'
 import auth from '@/services/authService' // ⬅️ ajusta la ruta si está en otro lugar
@@ -177,6 +177,23 @@ const cargarCatalogoQR = async () => {
   }
 }
 
+const detenerEscaneo = async () => {
+  try {
+    if (qrScanner.value && qrScanner.value._isScanning) {
+      await qrScanner.value.stop()
+      await qrScanner.value.clear()
+    }
+  } catch (err) {
+    console.error('❌ Error al detener escaneo:', err.message)
+  } finally {
+    qrScanner.value = null
+  }
+}
+
+
+onBeforeUnmount(() => {
+  detenerEscaneo()
+})
 
 // Historial debe ir arriba para que Vue lo registre correctamente
 const historial = ref({})
@@ -211,7 +228,7 @@ const tipoMedicion = ref('')
 
 const now = computed(() => new Date().toLocaleString())
 
-let qrScanner = null
+const qrScanner = ref(null)
 
 onMounted(() => {
   iniciarEscaneo()
@@ -222,22 +239,29 @@ onMounted(() => {
   }
 })
 
-const iniciarEscaneo = () => {
-  qrScanner = new Html5Qrcode('reader')
-  qrScanner.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: 250 },
-    (decodedText) => {
-      procesarQR(decodedText)
-      qrScanner.stop().catch(console.error)
-    },
-    (err) => {
-      if (err.name !== 'NotFoundException') {
-        console.warn('Otro error escaneando:', err)
+const iniciarEscaneo = async () => {
+  if (qrScanner.value) return // ya está creado
+
+  qrScanner.value = new Html5Qrcode('reader')
+  try {
+    await qrScanner.value.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: 250 },
+      (decodedText) => {
+        procesarQR(decodedText)
+        detenerEscaneo()
+      },
+      (err) => {
+        if (err.name !== 'NotFoundException') {
+          console.warn('Otro error escaneando:', err)
+        }
       }
-    }
-  )
+    )
+  } catch (err) {
+    console.error('❌ No se pudo iniciar el escáner:', err)
+  }
 }
+
 const limpiarFormulario = () => {
   unidad.value = ''
   comentario.value = ''
@@ -266,15 +290,18 @@ const cargarHistorialDesdeAPI = async (id) => {
 }
 
 
-const procesarQR = (id) => {
+const procesarQR = async (id) => {
+  await detenerEscaneo() // ✅ detener escaneo activo
   limpiarFormulario()
   scannedId.value = id
+
   const datos = registrosCatalogo.value[id] || { area: 'No registrada', tipo: 'Agua' }
   area.value = datos.area
-  tipoMedicion.value = datos.tipo,
-    cargarHistorialDesdeAPI(id) // 👈 aquí
+  tipoMedicion.value = datos.tipo
 
+  cargarHistorialDesdeAPI(id)
 }
+
 
 const usarManualId = () => {
   if (manualId.value) {
@@ -284,7 +311,8 @@ const usarManualId = () => {
 }
 
 
-const reiniciarEscaneo = () => {
+const reiniciarEscaneo = async () => {
+  await detenerEscaneo()
   scannedId.value = ''
   area.value = ''
   tipoMedicion.value = ''

@@ -1,8 +1,9 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import ApexChart from 'vue3-apexcharts'
 
+const API_URL = import.meta.env.VITE_API_URL
 const router = useRouter()
 
 function irARuta(ruta) {
@@ -10,13 +11,49 @@ function irARuta(ruta) {
 }
 
 const cards = ref([
-  { title: 'Usuarios', value: 18, icon: 'bi bi-people', ruta: '/config/usuarios' },
-  { title: 'Medidores', value: 12, icon: 'bi bi-speedometer2', ruta: '/config/medidores' },
-  { title: 'Áreas', value: 6, icon: 'bi bi-diagram-3', ruta: '/config/areas' },
-  { title: 'QR Generados', value: 27, icon: 'bi bi-qr-code', ruta: '/config/qr' }
+  { title: 'Usuarios', value: 0, icon: 'bi bi-people', ruta: '/config/usuarios' },
+  { title: 'Áreas', value: 0, icon: 'bi bi-diagram-3', ruta: '/config/areas' },
+  { title: 'QR Generados/medidores', value: 0, icon: 'bi bi-qr-code', ruta: '/config/qr' }
 ])
 
-const barOptions = {
+// 🔄 Fetch cantidad de usuarios
+onMounted(async () => {
+  const token = localStorage.getItem('token')
+
+  try {
+    // 🔹 Contar usuarios
+    const userRes = await fetch(`${API_URL}/api/users/count`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!userRes.ok) throw new Error(await userRes.text());
+    const userData = await userRes.json();
+    const userCard = cards.value.find(c => c.title === 'Usuarios');
+    if (userCard) userCard.value = userData.total;
+
+    // 🔹 Contar QRs
+    const qrRes = await fetch(`${API_URL}/api/qrs/count`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!qrRes.ok) throw new Error(await qrRes.text());
+    const qrData = await qrRes.json();
+    const qrCard = cards.value.find(c => c.title.includes('QR'));
+    if (qrCard) qrCard.value = qrData.total;
+
+  } catch (err) {
+    console.error('🔥 Error al obtener datos del dashboard:', err.message);
+  }
+  // 🔹 Contar Áreas
+  const areaRes = await fetch(`${API_URL}/api/areas/count`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!areaRes.ok) throw new Error(await areaRes.text());
+  const areaData = await areaRes.json();
+  const areaCard = cards.value.find(c => c.title === 'Áreas');
+  if (areaCard) areaCard.value = areaData.total;
+});
+
+// 📊 Gráfico de barras dinámico
+const barOptions = computed(() => ({
   chart: {
     type: 'bar',
     toolbar: { show: false }
@@ -30,97 +67,24 @@ const barOptions = {
       columnWidth: '50%'
     }
   }
-}
+}))
 
-const barSeries = [{
+const barSeries = computed(() => [{
   name: 'Cantidad',
   data: cards.value.map(c => c.value)
-}]
+}])
 
+// 📈 Otros datos y gráficos
 const radialOptions = {
-  chart: {
-    type: 'radialBar'
-  },
+  chart: { type: 'radialBar' },
   labels: ['Avance General']
 }
+const radialSeries = [70]
 
-const radialSeries = [70] // ejemplo de 70% de avance
-
-
-const tiempo = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-const temperatura = [22, 24, 21, 25, 23, 26, 22]
-const consumo = [12, 15, 13, 16, 14, 17, 13]
-const agua = [120, 135, 110, 150, 140, 160, 130]
-
-
-const lineOptions = {
-  chart: {
-    type: 'line',
-    toolbar: { show: false }
-  },
-  stroke: {
-    curve: 'smooth'
-  },
-  xaxis: {
-    categories: tiempo
-  },
-  markers: {
-    size: 4
-  }
-}
-
-const lineSeries = [{
-  name: 'Temperatura °C',
-  data: temperatura
-}]
-
-const areaOptions = {
-  chart: {
-    type: 'area',
-    toolbar: { show: false }
-  },
-  dataLabels: {
-    enabled: false
-  },
-  xaxis: {
-    categories: tiempo
-  },
-  stroke: {
-    curve: 'smooth'
-  }
-}
-
-const areaSeries = [{
-  name: 'kWh consumidos',
-  data: consumo
-}]
-
-const aguaOptions = {
-  chart: {
-    type: 'bar',
-    toolbar: { show: false }
-  },
-  plotOptions: {
-    bar: {
-      columnWidth: '40%',
-      distributed: true
-    }
-  },
-  xaxis: {
-    categories: tiempo
-  },
-  dataLabels: {
-    enabled: false
-  }
-}
-
-const aguaSeries = [{
-  name: 'Litros de Agua',
-  data: agua
-}]
 
 
 </script>
+
 
 <template>
   <div>
@@ -128,16 +92,8 @@ const aguaSeries = [{
 
     <!-- Tarjetas resumen -->
     <div class="row">
-      <div
-        class="col-md-3 mb-3"
-        v-for="card in cards"
-        :key="card.title"
-      >
-        <div
-          class="card shadow-sm text-center tarjeta-hover"
-          @click="irARuta(card.ruta)"
-          style="cursor: pointer;"
-        >
+      <div class="col-md-4 mb-4" v-for="card in cards" :key="card.title">
+        <div class="card shadow-sm text-center tarjeta-hover" @click="irARuta(card.ruta)" style="cursor: pointer;">
           <div class="card-body">
             <i :class="card.icon" style="font-size: 2rem;"></i>
             <h6 class="mt-2">{{ card.title }}</h6>
@@ -151,23 +107,13 @@ const aguaSeries = [{
       <div class="col-md-8 mb-3">
         <div class="card shadow-sm p-3">
           <h6 class="mb-2">Resumen por Categoría</h6>
-          <ApexChart
-            type="bar"
-            height="300"
-            :options="barOptions"
-            :series="barSeries"
-          />
+          <ApexChart type="bar" height="300" :options="barOptions" :series="barSeries" />
         </div>
       </div>
       <div class="col-md-4 mb-3">
         <div class="card shadow-sm p-3 text-center">
           <h6 class="mb-2">Avance General</h6>
-          <ApexChart
-            type="radialBar"
-            height="300"
-            :options="radialOptions"
-            :series="radialSeries"
-          />
+          <ApexChart type="radialBar" height="300" :options="radialOptions" :series="radialSeries" />
         </div>
       </div>
     </div>

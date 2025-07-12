@@ -70,3 +70,13 @@ exports.eliminarArea = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar área' })
   }
 }
+
+exports.contarAreas = async (req, res) => {
+  try {
+    const total = await Area.countDocuments();
+    res.json({ total });
+  } catch (err) {
+    console.error('❌ Error al contar áreas:', err.message);
+    res.status(500).json({ message: 'Error al contar las áreas' });
+  }
+};

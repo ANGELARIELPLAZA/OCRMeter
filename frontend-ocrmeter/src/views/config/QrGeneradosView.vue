@@ -5,7 +5,8 @@
 
     <div class="card p-3 shadow-sm">
       <button class="btn btn-success mb-3" @click="abrirModal">Crear nuevo QR</button>
-      <button class="btn btn-outline-primary mb-3" :disabled="qrCodesSeleccionados.length === 0" @click="descargarPDF">Descargar seleccionados en PDF</button>
+      <button class="btn btn-outline-primary mb-3" :disabled="qrCodesSeleccionados.length === 0"
+        @click="descargarPDF">Descargar seleccionados en PDF</button>
 
       <table class="table table-bordered table-striped">
         <thead class="table-light">
@@ -54,38 +55,43 @@
             <button type="button" class="btn-close" @click="cerrarModal"></button>
           </div>
           <div class="modal-body">
-            <div class="mb-3">
-              <label class="form-label">ID (personalizado o autogenerado)</label>
-              <div class="input-group">
-                <input type="text" class="form-control" v-model="nuevoQR.id" placeholder="Ej: QR-000123" />
-                <button class="btn btn-outline-secondary" type="button" @click="generarId">Generar</button>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Nombre / Entidad</label>
-              <input type="text" class="form-control" v-model="nuevoQR.nombre" />
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Marca</label>
-              <select class="form-select" v-model="nuevoQR.marca">
-                <option value="" disabled>Seleccionar marca</option>
-                <option v-for="marca in marcas" :key="marca">{{ marca }}</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Modelo</label>
-              <select class="form-select" v-model="nuevoQR.modelo" :disabled="!nuevoQR.marca">
-                <option value="" disabled>Seleccionar modelo</option>
-                <option v-for="modelo in modelos" :key="modelo">{{ modelo }}</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Área</label>
-              <select class="form-select" v-model="nuevoQR.area">
-                <option value="" disabled>Seleccionar área</option>
-                <option v-for="area in areas" :key="area.id">{{ area.nombre }}</option>
-              </select>
-            </div>
+         <div class="mb-3">
+  <label class="form-label">ID (personalizado o autogenerado)</label>
+  <div class="input-group">
+    <input type="text" class="form-control" v-model="nuevoQR.id" placeholder="Ej: QR-000123"
+      :class="{ 'is-invalid': errores.id }" />
+    <button class="btn btn-outline-secondary" type="button" @click="generarId">Generar</button>
+  </div>
+</div>
+<div class="mb-3">
+  <label class="form-label">Nombre / Entidad</label>
+  <input type="text" class="form-control" v-model="nuevoQR.nombre"
+    :class="{ 'is-invalid': errores.nombre }" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Marca</label>
+  <input type="text" class="form-control" v-model="nuevoQR.marca" list="lista-marca"
+    placeholder="Escribe o selecciona una marca" :class="{ 'is-invalid': errores.marca }" />
+  <datalist id="lista-marca">
+    <option v-for="marca in marcas" :key="marca" :value="marca" />
+  </datalist>
+</div>
+<div class="mb-3">
+  <label class="form-label">Modelo</label>
+  <input type="text" class="form-control" v-model="nuevoQR.modelo" list="lista-modelos"
+    placeholder="Escribe o selecciona un modelo" :class="{ 'is-invalid': errores.modelo }" :disabled="!nuevoQR.marca" />
+  <datalist id="lista-modelos">
+    <option v-for="modelo in modelos" :key="modelo" :value="modelo" />
+  </datalist>
+</div>
+<div class="mb-3">
+  <label class="form-label">Área</label>
+  <select class="form-select" v-model="nuevoQR.area" :class="{ 'is-invalid': errores.area }">
+    <option value="" disabled>Seleccionar área</option>
+    <option v-for="area in areas" :key="area.id">{{ area.nombre }}</option>
+  </select>
+</div>
+
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" @click="cerrarModal">Cancelar</button>
@@ -113,6 +119,13 @@ const medidores = ref([])
 
 const marcas = ref([])
 const modelos = ref([])
+const errores = ref({
+  id: false,
+  nombre: false,
+  marca: false,
+  modelo: false,
+  area: false
+})
 
 onMounted(() => {
   obtenerAreas()
@@ -149,7 +162,11 @@ const obtenerAreas = async () => {
       headers: { Authorization: `Bearer ${token}` }
     })
     const data = await res.json()
-    areas.value = data.map(a => ({ id: a._id, nombre: a.nombre }))
+
+    // ✅ Filtrar elementos nulos o mal formados
+    areas.value = data
+      .filter(a => a && a._id && a.nombre)
+      .map(a => ({ id: a._id, nombre: a.nombre }))
   } catch (err) {
     console.error('Error al obtener áreas:', err.message)
   }
@@ -186,8 +203,18 @@ const cerrarModal = () => {
 
 const crearQR = async () => {
   const { id, nombre, tipo, marca, modelo, area } = nuevoQR.value
-  if (!id || !nombre || !tipo || !marca || !modelo || !area) {
-    alert('Completa todos los campos.')
+
+  errores.value = {
+    id: !id,
+    nombre: !nombre,
+    marca: !marca,
+    modelo: !modelo,
+    area: !area
+  }
+
+  const tieneErrores = Object.values(errores.value).some(e => e)
+  if (tieneErrores) {
+    alert('Por favor, completa todos los campos obligatorios.')
     return
   }
 
@@ -280,10 +307,16 @@ const descargarPDF = async () => {
 .modal {
   background: rgba(0, 0, 0, 0.5);
 }
+
 .small {
   font-size: 0.75rem;
 }
+
 .text-muted {
   color: #6c757d;
+}
+
+.is-invalid {
+  border: 1px solid red;
 }
 </style>

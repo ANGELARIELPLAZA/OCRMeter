@@ -49,3 +49,14 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar usuario' });
   }
 };
+
+exports.getUserCount = async (req, res) => {
+  try {
+    const total = await User.countDocuments();
+    console.log(total)
+    res.json({ total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error al contar usuarios' });
+  }
+};
