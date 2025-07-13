@@ -132,7 +132,7 @@
                 <i class="bi bi-qr-code-scan me-1"></i>
                 <strong>Escaneado:</strong> {{ ultimoQRDetectado }}
               </div>
-
+             
               <button class="btn btn-outline-secondary btn-sm mt-2" @click="detenerEscaneoQRModal">
                 <i class="bi bi-x-circle me-1"></i> Detener escáner
               </button>
@@ -255,16 +255,45 @@ const detenerEscaneoQRModal = async () => {
   try {
     if (qrScanner.value && qrScanner.value._isScanning) {
       await qrScanner.value.stop()
-      await qrScanner.value.clear()
     }
+    await qrScanner.value.clear()
   } catch (err) {
-    console.warn('Error al detener escáner:', err)
+    console.warn('⚠️ Error al detener o limpiar escáner:', err.message)
   } finally {
+    // ⛔ Fuerza el cierre de la cámara incluso si falló lo anterior
+    const videoEl = document.querySelector('video')
+    if (videoEl && videoEl.srcObject) {
+      const tracks = videoEl.srcObject.getTracks()
+      tracks.forEach(track => track.stop())
+      videoEl.srcObject = null
+      console.log('🎥 Cámara forzada a detenerse.')
+    }
+
+    // Limpia contenedor del escáner
+    const readerEl = document.getElementById('lectorQRModal')
+    if (readerEl) readerEl.innerHTML = ''
+
     qrScanner.value = null
   }
 }
 
-onBeforeUnmount(detenerEscaneoQRModal)
+
+const forzarCierreCamara = () => {
+  const videoEl = document.querySelector('video')
+  if (videoEl && videoEl.srcObject) {
+    const stream = videoEl.srcObject
+    const tracks = stream.getTracks()
+    tracks.forEach(track => track.stop()) // ⛔ Detiene cada pista de video
+    videoEl.srcObject = null
+    console.log('🎥 Cámara forzada a detenerse.')
+  }
+}
+
+
+onBeforeUnmount(() => {
+  detenerEscaneoQRModal()
+  forzarCierreCamara()
+})
 
 watch(modoEntrada, async (modo) => {
   if (modo === 'escaner') {
