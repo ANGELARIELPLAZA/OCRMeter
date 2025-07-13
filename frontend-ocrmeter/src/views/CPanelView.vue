@@ -9,6 +9,26 @@ const router = useRouter()
 function irARuta(ruta) {
   router.push(ruta)
 }
+const incidencias = ref([
+  {
+    fecha: '2025-07-12',
+    detectadoPor: 'Juan Pérez',
+    medidor: 'Medidor A1',
+    descripcion: 'Lectura anormal detectada fuera de rango durante la inspección de rutina.'
+  },
+  {
+    fecha: '2025-07-10',
+    detectadoPor: 'Ana Torres',
+    medidor: 'Medidor B3',
+    descripcion: 'Falla de comunicación intermitente detectada con el servidor MQTT.'
+  }
+]);
+
+const expandedRow = ref(null);
+
+function toggleExpand(index) {
+  expandedRow.value = expandedRow.value === index ? null : index;
+}
 
 const cards = ref([
   { title: 'Usuarios', value: 0, icon: 'bi bi-people', ruta: '/config/usuarios' },
@@ -103,6 +123,39 @@ const radialSeries = [70]
       </div>
     </div>
 
+    <!-- Tabla de incidencias -->
+    <div class="row">
+      <div class="col-md-12 mb-3">
+        <div class="card shadow-sm p-3">
+          <h6 class="mb-3">Resumen de Incidencias</h6>
+          <table class="table table-hover table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Fecha de Detección</th>
+                <th>Detectado por</th>
+                <th>Medidor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(incidencia, index) in incidencias" :key="index" @click="toggleExpand(index)"
+                style="cursor: pointer;">
+                <td>{{ incidencia.fecha }}</td>
+                <td>{{ incidencia.detectadoPor }}</td>
+                <td>{{ incidencia.medidor }}</td>
+              </tr>
+              <tr v-if="expandedRow === index" class="bg-light">
+                <td colspan="3">
+                  <strong>Detalles:</strong><br>
+                  {{ incidencia.descripcion }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-if="incidencias.length === 0" class="text-center text-muted">No hay incidencias registradas.</p>
+        </div>
+      </div>
+    </div>
+    <!-- Gráficos: Resumen por Categoría y Avance -->
     <div class="row mt-4">
       <div class="col-md-8 mb-3">
         <div class="card shadow-sm p-3">
@@ -117,8 +170,11 @@ const radialSeries = [70]
         </div>
       </div>
     </div>
+
+
   </div>
 </template>
+
 
 <style scoped>
 .tarjeta-hover:hover {

@@ -52,3 +52,22 @@ exports.contar = async (req, res) => {
     res.status(500).json({ message: 'Error al contar los QRs' });
   }
 };
+// GET buscar por ID (campo personalizado)
+exports.buscarPorId = async (req, res) => {
+  const { id } = req.query;
+
+  if (!id) {
+    return res.status(400).json({ message: 'Falta el parámetro id.' });
+  }
+
+  try {
+    const qr = await Qr.findOne({ id });
+    if (!qr) {
+      return res.status(404).json({ message: 'QR no encontrado' });
+    }
+    res.json(qr);
+  } catch (err) {
+    console.error('❌ Error al buscar QR:', err.message);
+    res.status(500).json({ message: 'Error al buscar el QR' });
+  }
+};

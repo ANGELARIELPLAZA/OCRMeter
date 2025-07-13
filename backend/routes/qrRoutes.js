@@ -8,5 +8,6 @@ router.get('/', auth, qrController.obtenerTodos);
 router.post('/', auth, qrController.crear);
 router.put('/:id', auth, qrController.actualizar);
 router.put('/deshabilitar/:id', auth, qrController.deshabilitar);
+router.get('/buscar',auth,  qrController.buscarPorId);
 
 module.exports = router;
