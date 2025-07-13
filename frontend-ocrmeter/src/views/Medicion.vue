@@ -147,14 +147,43 @@
       </div>
     </div>
   </n-card>
+  <!-- Toast Bootstrap -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+    <div class="toast align-items-center text-white border-0" :class="`bg-${toastTipo}`" role="alert"
+      aria-live="assertive" aria-atomic="true" ref="toastRef">
+      <div class="d-flex">
+        <div class="toast-body">{{ toastMensaje }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
 
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount  } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount,nextTick  } from 'vue'
 import { Html5Qrcode } from 'html5-qrcode'
 import { NCard, NTimeline, NTimelineItem, NCalendar } from 'naive-ui'
 import auth from '@/services/authService' // ⬅️ ajusta la ruta si está en otro lugar
+import { Toast } from 'bootstrap'
+
+const toastRef = ref(null)
+const toastMensaje = ref('')
+const toastTipo = ref('success') // success | danger | warning | info
+
+function mostrarToast(mensaje, tipo = 'success') {
+  toastMensaje.value = mensaje
+  toastTipo.value = tipo
+  nextTick(() => {
+const toast = new Toast(toastRef.value, {
+  delay: 5000, // tiempo en milisegundos
+  autohide: true
+})
+    toast.show()
+  })
+}
+
 
 const registrosCatalogo = ref({})
 const imagenBase64 = ref('')
@@ -187,8 +216,16 @@ const detenerEscaneo = async () => {
     console.error('❌ Error al detener escaneo:', err.message)
   } finally {
     qrScanner.value = null
+
+    // ✅ Liberar cámara manualmente
+    const videoElement = document.querySelector('#reader video')
+    if (videoElement && videoElement.srcObject) {
+      videoElement.srcObject.getTracks().forEach(track => track.stop())
+      videoElement.srcObject = null
+    }
   }
 }
+
 
 
 onBeforeUnmount(() => {
@@ -370,11 +407,10 @@ const submitForm = async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Error al guardar medición');
 
-    alert('✅ Medición registrada y guardada en backend');
-    console.log('📦 Respuesta backend:', data);
+    mostrarToast('Medición registrada', 'success')
   } catch (err) {
     console.error('❌ Error al enviar medición:', err.message);
-    alert('Error al guardar medición');
+    mostrarToast('Error al guardar medición', 'danger')
   }
 
   // limpiar UI

@@ -32,7 +32,6 @@
           <table class="table table-bordered table-striped">
             <thead class="table-light">
               <tr>
-                <th>#</th>
                 <th>Contador</th>
                 <th>Fecha</th>
                 <th>Medición</th>
@@ -41,7 +40,6 @@
             </thead>
             <tbody>
               <tr v-for="(med, index) in resultados" :key="index">
-                <td>{{ index + 1 }}</td>
                 <td>{{ med.contador }}</td>
                 <td>{{ med.fecha }}</td>
                 <td>{{ med.lectura }} {{ med.unidad }}</td>
@@ -122,6 +120,8 @@
 import { ref, computed, onMounted } from 'vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 import { Modal } from 'bootstrap'
+import authService from '@/services/authService'
+
 
 const filtros = ref({ fechaInicio: '', fechaFin: '', tipo: '' })
 const resultados = ref([])
@@ -190,7 +190,7 @@ const abrirModal = (registro) => {
 const guardarRevision = async (accion) => {
   try {
     const token = localStorage.getItem('token')
-    const user = JSON.parse(localStorage.getItem('usuario')) || {}
+const user = authService.getUsuario() || {}
 
     if (accion === 'validar') {
       // ✅ Solo actualiza el Scan
@@ -211,20 +211,26 @@ const guardarRevision = async (accion) => {
       resultados.value[index].estatus = 'Validado'
 
     } else if (accion === 'incidencia') {
-      // ✅ 1. Crear la incidencia
-      const res1 = await fetch(`${import.meta.env.VITE_API_URL}/api/incidencias`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          medicionId: modalData.value._id,
-          comentario: modalData.value.incidencia,
-          usuario: user.name || 'Desconocido',
-          asignadoA: modalData.value.asignadoA || 'Sin asignar'  // ✅ Agregado aquí
-        })
-      })
+  // ❌ Validar si no se ha asignado responsable
+  if (!modalData.value.asignadoA || modalData.value.asignadoA.trim() === '') {
+    alert('Debes asignar la incidencia a un responsable.');
+    return;
+  }
+
+  // ✅ 1. Crear la incidencia
+  const res1 = await fetch(`${import.meta.env.VITE_API_URL}/api/incidencias`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      medicionId: modalData.value._id,
+      comentario: modalData.value.incidencia,
+      usuario: user.name || 'Desconocido',
+      asignadoA: modalData.value.asignadoA
+    })
+  })
 
 
       const data1 = await res1.json()

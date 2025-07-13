@@ -38,3 +38,20 @@ exports.obtenerPorMedicion = async (req, res) => {
     res.status(500).json({ message: 'Error interno del servidor', error: error.message })
   }
 }
+// Obtener incidencias por usuario asignado
+exports.obtenerPorAsignado = async (req, res) => {
+  try {
+    const { asignadoA } = req.params;
+
+    if (!asignadoA) {
+      return res.status(400).json({ message: 'Falta el parámetro asignadoA' });
+    }
+
+    const incidencias = await Incidencia.find({ asignadoA }).sort({ fecha: -1 });
+
+    res.status(200).json(incidencias);
+  } catch (error) {
+    console.error('❌ Error al obtener incidencias por asignado:', error);
+    res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+  }
+};

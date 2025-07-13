@@ -12,12 +12,19 @@ import ConfigIndexView from '../views/config/ConfigIndexView.vue';
 import API from '@/views/information/ApiView.vue';
 import MedicionesReportes from '@/views/MedicionesReportes.vue';
 import Medicion from '@/views/Medicion.vue';
+import PerfilView from '@/views/PerfilView.vue';
 
 const routes = [
   { path: '/', component: LoginView, meta: { layout: 'auth' } },
   { path: '/login', component: LoginView, meta: { layout: 'auth' } },
 
   { path: '/dashboard', component: CPanelView, meta: { requiresAuth: true } },
+  {
+    path: '/perfil',
+    name: 'Perfil',
+    component: PerfilView,
+    meta: { requiresAuth: true }
+  },
 
   // 🛠 Configuración (solo admin)
   { path: '/config/usuarios', component: UsuariosView, meta: { requiresAuth: true, roles: ['admin'] } },

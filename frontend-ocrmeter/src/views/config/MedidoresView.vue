@@ -5,6 +5,17 @@
 
     <div class="card p-3 shadow-sm">
       <button class="btn btn-success mb-3" @click="abrirFormulario()">Crear Medidor</button>
+      <!-- Toast Bootstrap -->
+      <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+        <div class="toast align-items-center text-white border-0" :class="`bg-${toastTipo}`" role="alert"
+          aria-live="assertive" aria-atomic="true" ref="toastRef">
+          <div class="d-flex">
+            <div class="toast-body">{{ toastMensaje }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+              aria-label="Cerrar"></button>
+          </div>
+        </div>
+      </div>
 
       <!-- Tabla -->
       <table class="table table-bordered table-striped mt-2">
@@ -83,11 +94,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
+import { Toast } from 'bootstrap'
 
 const API_URL = import.meta.env.VITE_API_URL
 const token = localStorage.getItem('token')
+const toastRef = ref(null)
+const toastMensaje = ref('')
+const toastTipo = ref('success')
+
+function mostrarToast(mensaje, tipo = 'success') {
+  toastMensaje.value = mensaje
+  toastTipo.value = tipo
+  nextTick(() => {
+    const toast = new Toast(toastRef.value, {
+      delay: 3000,
+      autohide: true
+    })
+    toast.show()
+  })
+}
 
 const medidores = ref([])
 const mostrarModal = ref(false)
@@ -126,7 +153,8 @@ const cerrarFormulario = () => {
 
 const guardarMedidor = async () => {
   if (!form.value.id || !form.value.nombre || !form.value.marca || !form.value.modelo) {
-    alert('Completa todos los campos')
+    mostrarToast('Completa todos los campos', 'danger')
+
     return
   }
 
@@ -155,8 +183,10 @@ const guardarMedidor = async () => {
     }
 
     cerrarFormulario()
+    mostrarToast(editando.value ? '✅ Medidor actualizado' : '✅ Medidor creado', 'success')
+
   } catch (err) {
-    alert(err.message)
+mostrarToast(err.message, 'danger')
   }
 }
 
@@ -172,8 +202,10 @@ const eliminarMedidor = async (index) => {
 
     if (!res.ok) throw new Error('Error al eliminar')
     medidores.value.splice(index, 1)
+    mostrarToast('✅ Medidor eliminado correctamente', 'success')
+
   } catch (err) {
-    alert(err.message)
+mostrarToast(err.message, 'danger')
   }
 }
 

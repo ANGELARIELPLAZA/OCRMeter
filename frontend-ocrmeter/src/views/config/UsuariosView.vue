@@ -4,6 +4,17 @@
 
     <div class="card p-3 shadow-sm">
       <button class="btn btn-success mb-3" @click="abrirFormulario()">Crear Usuario</button>
+      <!-- Toast Bootstrap -->
+      <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+        <div class="toast align-items-center text-white border-0" :class="`bg-${toastTipo}`" role="alert"
+          aria-live="assertive" aria-atomic="true" ref="toastRef">
+          <div class="d-flex">
+            <div class="toast-body">{{ toastMensaje }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+              aria-label="Cerrar"></button>
+          </div>
+        </div>
+      </div>
 
       <div class="table-responsive">
         <table class="table table-bordered table-striped">
@@ -74,10 +85,50 @@
       </div>
     </div>
   </div>
+  <!-- Modal Confirmación de Eliminación -->
+<div class="modal fade show d-block" tabindex="-1" v-if="mostrarConfirmacion">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">¿Eliminar usuario?</h5>
+        <button type="button" class="btn-close" @click="cerrarConfirmacion"></button>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro de que deseas eliminar al usuario <strong>{{ usuarioSeleccionado?.nombre }}</strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" @click="cerrarConfirmacion">Cancelar</button>
+        <button class="btn btn-danger" @click="confirmarEliminacion">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" v-if="mostrarConfirmacion"></div>
+
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
+import { Toast } from 'bootstrap'
+const toastRef = ref(null)
+const toastMensaje = ref('')
+const toastTipo = ref('success')
+const mostrarConfirmacion = ref(false)
+const usuarioSeleccionado = ref(null)
+let indiceAEliminar = -1
+
+function mostrarToast(mensaje, tipo = 'success') {
+  toastMensaje.value = mensaje
+  toastTipo.value = tipo
+  nextTick(() => {
+    const toast = new Toast(toastRef.value, {
+      delay: 3000,
+      autohide: true
+    })
+    toast.show()
+  })
+}
+
 const API_URL = import.meta.env.VITE_API_URL
 
 const usuarios = ref([])
@@ -122,8 +173,8 @@ const guardarUsuario = async () => {
   try {
     const token = localStorage.getItem('token')
     const endpoint = editando.value
-  ? `${API_URL}/api/users/${usuarios.value[indiceEditando.value].id}`
-  : `${API_URL}/api/auth/register`
+      ? `${API_URL}/api/users/${usuarios.value[indiceEditando.value].id}`
+      : `${API_URL}/api/auth/register`
 
     const method = editando.value ? 'PUT' : 'POST'
 
@@ -137,7 +188,7 @@ const guardarUsuario = async () => {
     })
 
     const data = await res.json()
-    if (!res.ok) throw new Error(data.message)
+  
 
     if (editando.value) {
       usuarios.value[indiceEditando.value] = {
@@ -158,19 +209,25 @@ const guardarUsuario = async () => {
     }
 
     cerrarFormulario()
+    mostrarToast(editando.value ? 'Usuario actualizado' : 'Usuario creado', 'success')
+
   } catch (err) {
     console.error('Error al guardar:', err.message)
-    alert('Error al guardar usuario')
+    mostrarToast('Error al guardar usuario', 'danger')
   }
 }
+const cerrarConfirmacion = () => {
+  mostrarConfirmacion.value = false
+  usuarioSeleccionado.value = null
+  indiceAEliminar = -1
+}
 
-const eliminarUsuario = async (index) => {
-  const confirmDelete = confirm('¿Estás seguro de eliminar este usuario?')
-  if (!confirmDelete) return
+const confirmarEliminacion = async () => {
+  if (indiceAEliminar === -1 || !usuarioSeleccionado.value) return
 
   try {
     const token = localStorage.getItem('token')
-    const id = usuarios.value[index].id
+    const id = usuarioSeleccionado.value.id
 
     const res = await fetch(`${API_URL}/api/users/${id}`, {
       method: 'DELETE',
@@ -178,15 +235,24 @@ const eliminarUsuario = async (index) => {
     })
 
     if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.message || 'Error al eliminar usuario')
+      const text = await res.text()
+      throw new Error(text || 'Error al eliminar usuario')
     }
 
-    usuarios.value.splice(index, 1)
+    usuarios.value.splice(indiceAEliminar, 1)
+    mostrarToast('✅ Usuario eliminado correctamente', 'success')
   } catch (error) {
     console.error('Error al eliminar usuario:', error.message)
-    alert('No se pudo eliminar el usuario')
+    mostrarToast('❌ No se pudo eliminar el usuario', 'danger')
+  } finally {
+    cerrarConfirmacion()
   }
+}
+
+const eliminarUsuario = (index) => {
+  usuarioSeleccionado.value = usuarios.value[index]
+  indiceAEliminar = index
+  mostrarConfirmacion.value = true
 }
 
 onMounted(async () => {

@@ -9,20 +9,21 @@ const router = useRouter()
 function irARuta(ruta) {
   router.push(ruta)
 }
-const incidencias = ref([
-  {
-    fecha: '2025-07-12',
-    detectadoPor: 'Juan Pérez',
-    medidor: 'Medidor A1',
-    descripcion: 'Lectura anormal detectada fuera de rango durante la inspección de rutina.'
-  },
-  {
-    fecha: '2025-07-10',
-    detectadoPor: 'Ana Torres',
-    medidor: 'Medidor B3',
-    descripcion: 'Falla de comunicación intermitente detectada con el servidor MQTT.'
-  }
-]);
+function formatearFecha(fechaIso) {
+  const fecha = new Date(fechaIso)
+  return fecha.toLocaleString('es-MX', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: 'America/Mexico_City'
+  })
+}
+const incidencias = ref([])
+
 
 const expandedRow = ref(null);
 
@@ -58,6 +59,16 @@ onMounted(async () => {
     const qrData = await qrRes.json();
     const qrCard = cards.value.find(c => c.title.includes('QR'));
     if (qrCard) qrCard.value = qrData.total;
+    const usuario = localStorage.getItem('usuarioName') // 👈 asume que guardas el mail o ID en login
+
+    const res = await fetch(`${API_URL}/api/incidencias/asignado/${usuario}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+    incidencias.value = data
+
 
   } catch (err) {
     console.error('🔥 Error al obtener datos del dashboard:', err.message);
@@ -134,14 +145,18 @@ const radialSeries = [70]
                 <th>Fecha de Detección</th>
                 <th>Detectado por</th>
                 <th>Medidor</th>
+                <th>Comentario</th>
+
               </tr>
             </thead>
             <tbody>
               <tr v-for="(incidencia, index) in incidencias" :key="index" @click="toggleExpand(index)"
                 style="cursor: pointer;">
-                <td>{{ incidencia.fecha }}</td>
-                <td>{{ incidencia.detectadoPor }}</td>
+                <td>{{ formatearFecha(incidencia.fecha) }}</td>
+                <td>{{ incidencia.usuario }}</td>
                 <td>{{ incidencia.medidor }}</td>
+                <td>{{ incidencia.comentario }}</td>
+
               </tr>
               <tr v-if="expandedRow === index" class="bg-light">
                 <td colspan="3">
