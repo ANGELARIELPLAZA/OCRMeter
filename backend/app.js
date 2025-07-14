@@ -16,7 +16,8 @@ const app = express();
 // ✅ Agrega el middleware CORS antes de definir las rutas
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://74.208.44.21:5173'
+  'http://74.208.44.21:5173',
+  'http://systemdata.solutions:5173'
 ];
 
 app.use(cors({
