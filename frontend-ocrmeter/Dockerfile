@@ -1,17 +1,11 @@
-# Etapa 1: build de producción
+# Etapa 1: Compila el frontend
 FROM node:18 as builder
 
 WORKDIR /app
 COPY . .
 RUN npm install
-ENV NODE_ENV=production
 RUN npm run build
 
-# Etapa 2: Nginx para servir la app
+# Etapa 2: Solo entrega el frontend
 FROM nginx:alpine
-
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copia configuración básica de nginx (opcional)
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
