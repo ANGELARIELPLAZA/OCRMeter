@@ -34,3 +34,5 @@ certs/
 *.cer
 *.pem
 *.crt
+
+/data/

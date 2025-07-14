@@ -9,6 +9,8 @@ const medidorRoutes = require('./routes/medidorRoutes');
 const areaRoutes = require('./routes/areaRoutes');
 const qrRoutes = require('./routes/qrRoutes');
 const incidenciaRoutes = require('./routes/incidenciaRoutes')
+const https = require('https');
+const fs = require('fs');
 
 dotenv.config();
 const app = express();
@@ -19,9 +21,14 @@ const allowedOrigins = [
   'http://74.208.44.21:5173',
   'http://systemdata.solutions:5173',
   'https://systemdata.solutions:5173',
-
+  'https://systemdata.solutions:5173',
+  'https://systemdata.solutions',
+  'http://systemdata.solutions',
 ];
-
+const credentials = {
+  key: fs.readFileSync('./certs/systemdata.key'),
+  cert: fs.readFileSync('./certs/systemdata.crt')
+};
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -48,4 +55,7 @@ app.use('/api/qrs', qrRoutes);
 app.use('/api/incidencias', incidenciaRoutes)
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+
+https.createServer(credentials, app).listen(PORT, () => {
+  console.log(`Servidor HTTPS corriendo en puerto ${PORT}`);
+});

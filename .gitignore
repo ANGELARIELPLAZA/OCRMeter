@@ -86,3 +86,10 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+
+# Certificados SSL
+certs/
+*.key
+*.cer
+*.pem
+*.crt
