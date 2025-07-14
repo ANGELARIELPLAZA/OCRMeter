@@ -16,7 +16,10 @@ const app = express();
 // ✅ Agrega el middleware CORS antes de definir las rutas
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://74.208.44.21:5173'
+  'http://74.208.44.21:5173',
+  'http://systemdata.solutions:5173',
+  'https://systemdata.solutions:5173',
+
 ];
 
 app.use(cors({
@@ -33,8 +36,8 @@ app.use(cors({
 app.use(express.json());
 console.log(process.env.MONGO_URI)
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB conectado'))
-    .catch(err => console.error(err));
+  .then(() => console.log('MongoDB conectado'))
+  .catch(err => console.error(err));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
